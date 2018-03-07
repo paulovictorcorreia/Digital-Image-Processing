@@ -1,10 +1,5 @@
 [Home](https://paulovictorcorreia.github.io/)
 
-## Introduction
-
-As we have knowledge, we, as humans, want to reduce the amount of work done by us and substitute for machines. Digital Image Processing is making us one step closer to this.
-
-This page contains the exercises of DIP course lectured by Professor Agostinho Brito Jr, and by that we have an apresentation of the problems and how we solved them, including codes, input images and output images. Check this subject repository clicking [here](https://github.com/paulovictorcorreia/Digital-Image-Processing), where every file and picture we talk about is.
 
 ## 1. Initial Concepts
 
@@ -39,7 +34,7 @@ This exercise asks us to make a program in which asks the user for 2 points on a
 
 The base image we used is:
 
-![Base image for the exercises on section 2](paulovictorcorreia.github.io/DIP/biel.png)
+![Base image for the exercises on section 2](paulovictorcorreia.github.io/Digital-Image-Processing/Manipulating-Pixels/biel.png)
 
 For this first exercise, we wrote the following code:
 ```c++
