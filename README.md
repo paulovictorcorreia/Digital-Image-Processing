@@ -110,21 +110,21 @@ int main(int, char**){
 
 The entry command on the Linux terminal was this:
 
-![Command line entry](paulovictorcorreia.github.io/DIP/terminal_regions.png)
+![Command line entry](ManipulatingPixels/terminal_regions.png)
 
 And, finally, the output picture of the inverted colors on _biel.png_ picture:
 
-![Inverted region of the picture](paulovictorcorreia.github.io/DIP/biel_regions.png)
+![Inverted region of the picture](ManipulatingPixels/biel_regions.png)
 
 ### Inverted Quadrants
 
 For this exercise, we had the image as it shows on the scheme:
 
-![Quadrants](quadrants.png)
+![Quadrants](ManipulatingPixels/quadrants.png)
 
 And then invert the quadrants in such way tha the image ends up like this:
 
-![Inverted Quadrants](inverted_quadrants.png)
+![Inverted Quadrants](ManipulatingPixels/inverted_quadrants.png)
 
 To complete this task, we wrote the following code:
 
@@ -189,6 +189,6 @@ an auxiliar variable 'aux', so we could change the pixels without the need of an
 
 The output image we obtained using _biel.png_ was:
 
-![Inverted biel.png](paulovictorcorreia.github.io/DIP/biel_inverted.png)
+![Inverted biel.png](ManipulatingPixels/biel_inverted.png)
 
 
