@@ -34,7 +34,7 @@ This exercise asks us to make a program in which asks the user for 2 points on a
 
 The base image we used is:
 
-![Base image for the exercises on section 2](https://github.com/paulovictorcorreia/Digital-Image-Processing/tree/master/Manipulating%20Pixels/biel.png)
+![Base image for the exercises on section 2](ManipulatingPixels/biel.png)
 
 For this first exercise, we wrote the following code:
 ```c++
