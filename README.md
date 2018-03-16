@@ -116,7 +116,7 @@ And, finally, the output picture of the inverted colors on _biel.png_ picture:
 
 ![Inverted region of the picture](ManipulatingPixels/biel_regions.png)
 
-### Inverted Quadrants
+### 2.2 Inverted Quadrants
 
 For this exercise, we had the image as it shows on the scheme:
 
@@ -190,5 +190,141 @@ an auxiliar variable 'aux', so we could change the pixels without the need of an
 The output image we obtained using _biel.png_ was:
 
 ![Inverted biel.png](ManipulatingPixels/biel_inverted.png)
+
+## 3 Filling Regions
+
+In this section, we were introduced to labelling techniques using OpenCV function floodFill, in which we used to count the objects in the following image _bolhas.png_:
+
+![](BubblesCount/bolhas.png)
+
+### 3.1 Enhancing Algorithm
+A good question to make is: what if there were more than 255 objects on the scene? To solve this problem, we could use an auxiliar variable, which would accumulate every time the number of objects reach 255, and the variable we used to label would be written down to zero, and the total number of objects on the scene would be the sum of the auxiliar variable and the number in the variable that counts objects at the end of the algorithm.
+
+### 3.2 Counting regions with holes
+Now, we were challenged to write a program to count the number of objects with holes in _bolhas.png_. To do this, we had to first remove the objects that were touching the border, because we have no idea of their actual shape. After, we painted the whole background with the color 1 in the greyscale, so we could diferentiate the holes from the background, making our work a lot more easier. After this we count the total amount of images on the scene.
+
+The algorithm will read each pixel and check 3 things: 
+* If the current pixel is 0 and the previous has the color of the current label, confirming that we have a object with a hole, and then we paint the color of his corresponding label;
+* If the current pixel is 0 and the previous has a color smaller the the current label, confirming that we are in another hole from the object, and then we paint the color of his corresponding label, count +1 bubble and  +1 label;
+* If we reached the bottom right corner of the image and the label is smaller then the number of objects, so we write _i_ and _j_ down to zero and increases the label.
+
+The code written for this problem is:
+
+```c++
+#include <iostream>
+#include <opencv2/opencv.hpp>
+
+using namespace cv;
+using namespace std;
+
+int main(int argc, char** argv){
+  Mat image, mask;
+  int width, height;
+  int nobjects, nlabel;
+  int nbubbles;
+  CvPoint p;//OpenCV Class for reading a point and use on floodFill
+  image = imread(argv[1],CV_LOAD_IMAGE_GRAYSCALE); //Read iamge in grayscale
+  
+  if(!image.data)//Checks if image successfully loaded
+  {
+    std::cout << "imagem nao carregou corretamente\n";
+    return(-1);
+  }
+  width=image.size().width;
+  height=image.size().height;
+
+  //Removes top and bottom objects on the border
+  for(int i = 0; i < width; i++)
+  {
+    p.y = 0;
+    p.x = i;
+    floodFill(image, p, 0);
+    p.y = height-1;
+    floodFill(image, p, 0);
+  }
+  // Removes left and right objects on the border
+  for(int i = 0; i < height; i++)
+  {
+    p.x = 0;
+    p.y = i;
+    floodFill(image, p, 0);
+    p.x = height-1;
+    floodFill(image, p, 0);
+  }
+  //Counts The total number of objects
+  nobjects=0;
+  for(int i=0; i<height; i++)
+  {
+    for(int j=0; j<width; j++)
+    {
+      if(image.at<uchar>(i,j) == 255)
+      {
+        // achou um objeto
+        nobjects++;
+        p.x=j;
+        p.y=i;
+        floodFill(image,p,nobjects);
+      }
+    }
+  }
+  //Counts the number of objects with holes in it
+  p.x = 0;
+  p.y = 0;
+  nbubbles = 0;
+  nlabel = 1;//Initialiaze label with 1
+  floodFill(image, p, 1);
+  
+  for(int i=0; i<height; i++)
+  {
+    for(int j=0; j<width; j++)
+    {
+      //Checks if the left pixel has the same color of the curent label
+      if((image.at<uchar>(i,j-1) == nlabel) && (image.at<uchar>(i,j) == 0))
+      {
+        // achou um objeto
+        nbubbles++;
+        p.x=j;
+        p.y=i;
+        floodFill(image,p,0);
+        nlabel++;
+      }
+      //Checks if the hole is from an object with 2+ holes
+      else if((image.at<uchar>(i,j-1) < nlabel) && (image.at<uchar>(i,j) == 0))
+      {
+        p.x=j;
+        p.y=i;
+        floodFill(image,p,(int)image.at<uchar>(i,j-1));
+      }
+      // Make the loop beging again to search for a object with the following label
+      if((i == height-1) && (j == width - 1) && (nlabel < nobjects))
+      {
+        i = 0;
+        j = 0;
+        nlabel++;
+
+      }
+    }
+  }
+  cout << "Total number of objects: " << nobjects << endl;
+  cout << "Total number of objects with bubbles " << nbubbles << endl;
+  imshow("image", image);
+  imwrite("labeling.png", image);
+  waitKey();
+  return 0;
+}
+
+```
+
+The output image we obtained was:
+
+![](BubblesCount/labeling.png)
+
+And the output on terminal:
+> Total number of objects: 21
+> Total number of objects with bubbles 9
+
+
+
+
 
 
