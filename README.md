@@ -1,5 +1,6 @@
 [Home](https://paulovictorcorreia.github.io/)
 
+This page contains the exercises of DIP course lectured by Professor Agostinho Brito Jr, and by that we have an apresentation of the problems and how we solved them, including codes, input images and output images. Student: Paulo Victor Queiroz Correia. Student number: 20170009258.
 
 ## 1. Initial Concepts
 
