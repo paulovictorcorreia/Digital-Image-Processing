@@ -60,6 +60,8 @@ int main(int argvc, char** argv){
     0, 1, 2, 1, 0,
     0, 0, 1, 0, 0};
 
+    int c1 = 1;
+    int c2 = 1;
   Mat cap, frame, frame32f, frameFiltered;
   Mat mask(3,3,CV_32F), mask1;
   Mat result, result1;
@@ -75,7 +77,6 @@ int main(int argvc, char** argv){
   std::cout << "altura =" << height<< "\n";;
 
   namedWindow("filtroespacial",1);
-
   mask = Mat(3, 3, CV_32F, media);
   scaleAdd(mask, 1/9.0, Mat::zeros(3,3,CV_32F), mask1);
   swap(mask, mask1);
@@ -88,7 +89,7 @@ int main(int argvc, char** argv){
     flip(frame, frame, 1);
     imshow("original", frame);
     frame.convertTo(frame32f, CV_32F);
-    filter2D(frame32f, frameFiltered, frame32f.depth(), mask, Point(1,1), 0);
+    filter2D(frame32f, frameFiltered, frame32f.depth(), mask, Point(c1,c1), 0);
     if(absolut){
       frameFiltered=abs(frameFiltered);
     }
@@ -100,6 +101,7 @@ int main(int argvc, char** argv){
     case 'a':
 	  menu();
       absolut=!absolut;
+      c1 = 1;
       break;
     case 'm':
 	  menu();
@@ -107,6 +109,7 @@ int main(int argvc, char** argv){
       scaleAdd(mask, 1/9.0, Mat::zeros(3,3,CV_32F), mask1);
       mask = mask1;
       printmask(mask);
+      c1 = 1;
       break;
     case 'g':
 	  menu();
@@ -114,29 +117,35 @@ int main(int argvc, char** argv){
       scaleAdd(mask, 1/16.0, Mat::zeros(3,3,CV_32F), mask1);
       mask = mask1;
       printmask(mask);
+      c1 = 1;
       break;
     case 'h':
 	  menu();
       mask = Mat(3, 3, CV_32F, horizontal);
       printmask(mask);
+      c1 = 1;
       break;
     case 'v':
 	  menu();
       mask = Mat(3, 3, CV_32F, vertical);
       printmask(mask);
+      c1 = 1;
       break;
     case 'l':
 	  menu();
       mask = Mat(3, 3, CV_32F, laplacian);
       printmask(mask);
+      c1 = 1;
       break;
     case 's':
       mask = Mat(5, 5, CV_32F, lg2);
       printmask(mask);
+      c1 = 2;
       break;
       case 'd':
         mask = Mat(9, 9, CV_32F, lg);
         printmask(mask);
+        c1 = 4;
         break;
     default:
       break;

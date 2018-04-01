@@ -4,7 +4,7 @@ This page contains the exercises of DIP course lectured by Professor Agostinho B
 
 ## 1. Initial Concepts
 
-There were no exercises on this section, but we have to present the makefile for compiling the code and the various modules of the OpenCV library: 
+There were no exercises on this section, but we have to present the makefile for compiling the code and the various modules of the OpenCV library:
 ```makefile
 .SUFFIXES:
 .SUFFIXES: .c .cpp
@@ -148,7 +148,7 @@ int main(int argc, char* argv[]){
 	}
 	picture = argv[1];
 	inv_image = imread(argv[1],CV_LOAD_IMAGE_GRAYSCALE);//Read image into Mat object
-	if(!inv_image.data){//Checks if picture has a valid format 
+	if(!inv_image.data){//Checks if picture has a valid format
 		cout << "nao abriu imagem" << endl;
 		exit(0);
 	}
@@ -179,7 +179,7 @@ int main(int argc, char* argv[]){
 	imshow("janela", inv_image);  
 	waitKey();
 
- 
+
   return 0;
 }
 
@@ -192,7 +192,7 @@ The output image we obtained using _biel.png_ was:
 
 ![Inverted biel.png](ManipulatingPixels/biel_inverted.png)
 
-## 3 Filling Regions
+## 3. Filling Regions
 
 In this section, we were introduced to labelling techniques using OpenCV function floodFill, in which we used to count the objects in the following image _bolhas.png_:
 
@@ -204,7 +204,7 @@ A good question to make is: what if there were more than 255 objects on the scen
 ### 3.2 Counting regions with holes
 Now, we were challenged to write a program to count the number of objects with holes in _bolhas.png_. To do this, we had to first remove the objects that were touching the border, because we have no idea of their actual shape. After, we painted the whole background with the color 1 in the greyscale, so we could diferentiate the holes from the background, making our work a lot more easier. After this we count the total amount of images on the scene.
 
-The algorithm will read each pixel and check 3 things: 
+The algorithm will read each pixel and check 3 things:
 * If the current pixel is 0 and the previous has the color of the current label, confirming that we have a object with a hole, and then we paint the color of his corresponding label;
 * If the current pixel is 0 and the previous has a color smaller the the current label, confirming that we are in another hole from the object, and then we paint the color of his corresponding label, count +1 bubble and  +1 label;
 * If we reached the bottom right corner of the image and the label is smaller then the number of objects, so we write _i_ and _j_ down to zero and increases the label.
@@ -225,7 +225,7 @@ int main(int argc, char** argv){
   int nbubbles;
   CvPoint p;//OpenCV Class for reading a point and use on floodFill
   image = imread(argv[1],CV_LOAD_IMAGE_GRAYSCALE); //Read iamge in grayscale
-  
+
   if(!image.data)//Checks if image successfully loaded
   {
     std::cout << "imagem nao carregou corretamente\n";
@@ -274,7 +274,7 @@ int main(int argc, char** argv){
   nbubbles = 0;
   nlabel = 1;//Initialiaze label with 1
   floodFill(image, p, 1);
-  
+
   for(int i=0; i<height; i++)
   {
     for(int j=0; j<width; j++)
@@ -322,10 +322,136 @@ The output image we obtained was:
 
 And the output on terminal:
 > Total number of objects: 21
+
+
 > Total number of objects with bubbles 9
 
+## 4. Histograms
+In this section, we are going to use the concepts of histogram for 2 things: calculate the equalization of a image stream and for constructing a primitive motion sensor, using a Playstation Eye, from Sony, for this task, and comparing the histograms of the last two images captured.
+
+### 4.1 Equalization
+
+The first exercize asked us to build an automatic equalizer using a camera and the images' histogram. The equalization was done for the three colors: red, green and blue. But before, what exactly means to equalize a picture?
+
+To equalize a picture means to redistribute the colors stastistically along all the histogram range, adjusting image intensity to enhance contrast. And for doing this, we're going to use the following code:
+
+```c++
+#include <iostream>
+#include <opencv2/opencv.hpp>
+
+using namespace cv;
+using namespace std;
+
+int main(int argc, char** argv){
+  Mat image;//Image that we will calculate the histograms and equalize them
+  Mat ref;//Reference image for comparison
+  int width, height;
+  VideoCapture cap;
+  vector<Mat> planes;
+  Mat histR, histG, histB;
+  int nbins = 64;
+  float range[] = {0, 256};
+  const float \*histrange = { range };
+  bool uniform = true;
+  bool acummulate = false;
+
+  cap.open(1);
+
+  if(!cap.isOpened()){
+    cout << "unavaiable camera\n";
+    return -1;
+  }
+
+  width  = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+  height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+
+  cout << "largura = " << width << endl;
+  cout << "altura  = " << height << endl;
+
+  int histw = nbins, histh = nbins/2;
+  Mat histImgR(histh, histw, CV_8UC3, Scalar(0,0,0));
+  Mat histImgG(histh, histw, CV_8UC3, Scalar(0,0,0));
+  Mat histImgB(histh, histw, CV_8UC3, Scalar(0,0,0));
+
+  while(1){
+    cap >> image;
+    ref = image;
+    split (image, planes);
+    //The next three lines are for we equalize the histograms of image
+    equalizeHist(planes[0], planes[0]);
+    equalizeHist(planes[1], planes[1]);
+    equalizeHist(planes[2], planes[2]);
+    merge(planes, image);
+    calcHist(&planes[0], 1, 0, Mat(), histR, 1,
+             &nbins, &histrange,
+             uniform, acummulate);
+    calcHist(&planes[1], 1, 0, Mat(), histG, 1,
+             &nbins, &histrange,
+             uniform, acummulate);
+    calcHist(&planes[2], 1, 0, Mat(), histB, 1,
+             &nbins, &histrange,
+             uniform, acummulate);
 
 
 
+    normalize(histR, histR, 0, histImgR.rows, NORM_MINMAX, -1, Mat());
+    normalize(histG, histG, 0, histImgG.rows, NORM_MINMAX, -1, Mat());
+    normalize(histB, histB, 0, histImgB.rows, NORM_MINMAX, -1, Mat());
+
+    histImgR.setTo(Scalar(0));
+    histImgG.setTo(Scalar(0));
+    histImgB.setTo(Scalar(0));
+
+    for(int i=0; i<nbins; i++){
+      line(histImgR,
+           Point(i, histh),
+           Point(i, histh-cvRound(histR.at<float>(i))),
+           Scalar(0, 0, 255), 1, 8, 0);
+      line(histImgG,
+           Point(i, histh),
+           Point(i, histh-cvRound(histG.at<float>(i))),
+           Scalar(0, 255, 0), 1, 8, 0);
+      line(histImgB,
+           Point(i, histh),
+           Point(i, histh-cvRound(histB.at<float>(i))),
+           Scalar(255, 0, 0), 1, 8, 0);
+    }
+    histImgR.copyTo(image(Rect(0, 0       ,nbins, histh)));
+    histImgG.copyTo(image(Rect(0, histh   ,nbins, histh)));
+    histImgB.copyTo(image(Rect(0, 2*histh ,nbins, histh)));
+    imshow("image", image);
+    imshow("imageOriginal", ref);
+    imwrite("equalized.png", image);
+    if(waitKey(30) >= 0) break;
+  }
+  return 0;
+}
+```
+
+In this code, named [_equalize.cpp_](equalize.cpp), we first create 3 different histograms with 64 different sets of colors, which means that the first element of the histogram will count pixels from 0 to 3, the second 4 to 7 and so on. After that, we capture an image from the Playstation Eye, split the image in three planes, one for each color, and use OpenCV function _equalizeHist()_ to equalize each one of them. Thus, we calculate the histogram for each plane and normalize them. Then we show the equalized picture side by side with the original picture and compare the results:
+
+Original picture:
+![](Histograms/image.png)
+
+Equalized picture:
+![](Histograms/equalized.png)
 
 
+As we can see, we notice that the equalized picture is brightier than the original, thus we can notice that near the door we can notice quite easier that 2 rectangles of light coming from the street, as if the contrast of the image was enhanced.
+
+## 5. Spacial Filtering
+
+In this section we were first introduced to the use of spacial filters, such as the mean operation, laplacian, gaussian, horizontal and vertical borders and so on.
+
+### 5.1 Laplacian of gaussian
+
+The only exercise of this section was to build a laplacian of gaussian filter, which means apply a laplacian filter over a gaussian bluried image. To do this, we cas use two different kernels and obtain similar results. But, before this, we have to explaing what exactly is going on.
+
+A gaussian distribution is something like this:
+\[ f(x) = \frac{1}{\sqrt{2\pi\sigma^2}} e^{\frac{-(x-\mu)}{2\sigma^2}}  \]
+
+And the laplacian is calculated with this operation:
+
+\[ L(x, y) = \nabla^2f(x, y) = \frac{\partial^2f(x,y)}{\partial x^2} + \frac{\partial^2f(x,y)}{\partial y^2} \]
+
+Font: http://academic.mu.edu/phys/matthysd/web226/Lab02.htm, accessed on April 1th 2018.
