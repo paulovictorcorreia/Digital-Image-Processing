@@ -21,7 +21,7 @@ Mat imageTop;
 char TrackbarName[50];
 
 void on_trackbar_blend(int, void*){
- alfa = (double) alfa_slider/alfa_slider_max ;
+ alfa = (double) 0.5*(tanh());
  addWeighted( image1, alfa, imageTop, 1-alfa, 0.0, blended);
  imshow("addweighted", blended);
 }

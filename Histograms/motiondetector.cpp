@@ -18,7 +18,7 @@ int main(int argc, char** argv){
 
   double diff;
 
-  cap.open(1);
+  cap.open(0);
   
   if(!cap.isOpened()){
     cout << "unavaiable camera\n";

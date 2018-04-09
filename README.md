@@ -439,6 +439,105 @@ Equalized picture:
 
 As we can see, we notice that the equalized picture is brightier than the original, thus we can notice that near the door we can notice quite easier that 2 rectangles of light coming from the street, as if the contrast of the image was enhanced.
 
+### 4.2 Motion Detector
+In this exercise, we were tasked to do a motion sensor with image processing, and to accomplish this task, we ought to analyse and process the image histogram, by comparing two following images histogram by correlation between them two. The correlation is a mathematical process that compares two signals(doesn't matter if sound, histogram or something else) and gives us the similarity between both of them, which means that if the correlation is 1, we are comparing a histogram with himself.
+
+After giving a mathematical base, let's see how we would do in OpenCV. It is important to notice that we are capturing a colored image, and because of this, we have three different histograms for three diffrerent colors, that is a huge deal. It is very important to decide which color you want to compare, in order to have an efficient motion detector, because if we choose red, for example, it would be very sensitive, because most of our skin have a strong presence of red, so, to counter measure this, I chose the green histogram, because on the scene I was testing, the green was not vey present, meaning that it would not be as sensitive as the red histogram.
+
+The code we used to build this histogram is the following:
+
+```c++
+#include <iostream>
+#include <opencv2/opencv.hpp>
+
+using namespace cv;
+using namespace std;
+
+int main(int argc, char** argv){
+  Mat image, image2; // The images we will write to calculate it's histograms
+  int width, height;
+  VideoCapture cap;
+  vector<Mat> planes;
+  Mat histR, histR2; //Mat objects for histogram comparison
+  int nbins = 64;
+  float range[] = {0, 256};
+  const float *histrange = { range };
+  bool uniform = true;
+  bool acummulate = false;
+
+  double diff;
+
+  cap.open(1);
+  
+  if(!cap.isOpened()){
+    cout << "unavaiable camera\n";
+    return -1;
+  }
+  
+  width  = cap.get(CV_CAP_PROP_FRAME_WIDTH);//Width of the image filmed
+  height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);//Width of the image filmed
+  cout << "largura = " << width << endl; 
+  cout << "altura  = " << height << endl; 
+
+  int histw = nbins, histh = nbins/2;
+  Mat histImgG(histh, histw, CV_8UC3, Scalar(0,0,0));
+
+  do{
+    cap >> image;//Captures first image to compare
+    split (image, planes);//splits into a vector of Mat objects
+    calcHist(&planes[1], 1, 0, Mat(), histR, 1,
+             &nbins, &histrange,
+             uniform, acummulate); // calculate histograms
+    
+
+    normalize(histR, histR, 0, histImgG.rows, NORM_MINMAX, -1, Mat());//normalize it's value beween 0 and 1
+
+    cap >> image2;//captures the second image for comparison
+    split (image2, planes);//splits image into a vector of Mat objects
+    calcHist(&planes[1], 1, 0, Mat(), histR2, 1,
+             &nbins, &histrange,
+             uniform, acummulate);//Calculate the second image histogram
+    
+
+    normalize(histR2, histR2, 0, histImgG.rows, NORM_MINMAX, -1, Mat());//normalize it's values
+    diff = compareHist(histR2, histR, 0);//calculate the correlation between the two histogram
+    									 //that means that if diff == 1, we're comparing two equal images
+
+    if(diff <= 0.9925)//Here we set the correlation value
+    {
+    	cout << diff << endl;//prints the correlation of the 2 images
+    	cout << "Motion Detected!!!\n\n";//Prints a warning if motion is detected
+    }
+
+
+    
+
+
+
+    imshow("image", image2);
+    if(waitKey(30) >= 0) break;
+  }while(1);
+  return 0;
+}
+```
+In order to compare two different histograms, we capture two frames, then we calculate the green histogram, normalize it and finally compare two histograms with the following parameters:
+```c++
+diff = compareHist(histR2, histR, 0);
+```
+
+In which each one of them means: the first two are the histograms we want to compare and the third is the kind of operation we want to use to compare them, and, as I said earlier, it is the correlation between them.
+The function we use to calculate the histogram is this:
+
+
+```c++
+calcHist(&planes[1], 1, 0, Mat(), histR2, 1,
+             &nbins, &histrange,
+             uniform, acummulate);//Calculate the second image histogram
+```
+
+The minimum similarity of the two histograms we accepted was 0.9925, valor that was decided after various tests with the Playstation Eye, which means that it could be different for other cameras because of their sensors.
+
+
 ## 5. Spacial Filtering
 
 In this section we were first introduced to the use of spacial filters, such as the mean operation, laplacian, gaussian, horizontal and vertical borders and so on.
