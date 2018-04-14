@@ -1,3 +1,4 @@
+
 [Home](https://paulovictorcorreia.github.io/)
 
 This page contains the exercises of DIP course lectured by Professor Agostinho Brito Jr, and by that we have an apresentation of the problems and how we solved them, including codes, input images and output images. Student: Paulo Victor Queiroz Correia. Student number: 20170009258.
@@ -461,23 +462,23 @@ int main(int argc, char** argv){
   Mat histR, histR2; //Mat objects for histogram comparison
   int nbins = 64;
   float range[] = {0, 256};
-  const float *histrange = { range };
+  const float \*histrange = { range };
   bool uniform = true;
   bool acummulate = false;
 
   double diff;
 
   cap.open(1);
-  
+
   if(!cap.isOpened()){
     cout << "unavaiable camera\n";
     return -1;
   }
-  
+
   width  = cap.get(CV_CAP_PROP_FRAME_WIDTH);//Width of the image filmed
   height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);//Width of the image filmed
-  cout << "largura = " << width << endl; 
-  cout << "altura  = " << height << endl; 
+  cout << "largura = " << width << endl;
+  cout << "altura  = " << height << endl;
 
   int histw = nbins, histh = nbins/2;
   Mat histImgG(histh, histw, CV_8UC3, Scalar(0,0,0));
@@ -488,7 +489,7 @@ int main(int argc, char** argv){
     calcHist(&planes[1], 1, 0, Mat(), histR, 1,
              &nbins, &histrange,
              uniform, acummulate); // calculate histograms
-    
+
 
     normalize(histR, histR, 0, histImgG.rows, NORM_MINMAX, -1, Mat());//normalize it's value beween 0 and 1
 
@@ -497,7 +498,7 @@ int main(int argc, char** argv){
     calcHist(&planes[1], 1, 0, Mat(), histR2, 1,
              &nbins, &histrange,
              uniform, acummulate);//Calculate the second image histogram
-    
+
 
     normalize(histR2, histR2, 0, histImgG.rows, NORM_MINMAX, -1, Mat());//normalize it's values
     diff = compareHist(histR2, histR, 0);//calculate the correlation between the two histogram
@@ -510,7 +511,7 @@ int main(int argc, char** argv){
     }
 
 
-    
+
 
 
 
@@ -547,10 +548,184 @@ In this section we were first introduced to the use of spacial filters, such as 
 The only exercise of this section was to build a laplacian of gaussian filter, which means apply a laplacian filter over a gaussian bluried image. To do this, we cas use two different kernels and obtain similar results. But, before this, we have to explaing what exactly is going on.
 
 A gaussian distribution is something like this:
-\[ f(x) = \frac{1}{\sqrt{2\pi\sigma^2}} e^{\frac{-(x-\mu)}{2\sigma^2}}  \]
+![](SpacialFiltteringI/equations/gauss.gif)
 
 And the laplacian is calculated with this operation:
 
-\[ L(x, y) = \nabla^2f(x, y) = \frac{\partial^2f(x,y)}{\partial x^2} + \frac{\partial^2f(x,y)}{\partial y^2} \]
+![](SpacialFiltteringI/equations/Laplaciano.gif)
 
 Font: http://academic.mu.edu/phys/matthysd/web226/Lab02.htm, accessed on April 1th 2018.
+
+
+I used two kernels to solve this problem, in which both of them were approximations of the laplacian of gaussian operation described. The 5x5 kernel used was:
+
+![](SpacialFiltteringI/equations/lapgauss5x5.gif)
+
+And the 9x9 kernel used for the activity was:
+
+![](SpacialFiltteringI/equations/lapgauss9x9.gif)
+
+And the code used to complete this task was:
+
+```c++
+#include <iostream>
+#include <opencv2/opencv.hpp>
+
+using namespace cv;
+using namespace std;
+
+void printmask(Mat &m){
+  for(int i=0; i<m.size().height; i++){
+    for(int j=0; j<m.size().width; j++){
+      cout << m.at<float>(i,j) << ",";
+    }
+    cout << endl;
+  }
+}
+
+void menu(){
+  cout << "\npressione a tecla para ativar o filtro: \n"
+	"a - calcular modulo\n"
+    "m - media\n"
+    "g - gauss\n"
+    "v - vertical\n"
+	"h - horizontal\n"
+    "l - laplaciano\n"
+    "s - laplacian of gaussian 5x5\n"
+    "d - laplacian of gaussian 9x9\n"
+	"esc - sair\n";
+}
+
+int main(int argvc, char** argv){
+  VideoCapture video;
+  int lg_flag = 0;
+  float media[] = {1,1,1,
+				   1,1,1,
+				   1,1,1};
+  float gauss[] = {1,2,1,
+				   2,4,2,
+				   1,2,1};
+  float vertical[]={-1,0,1,
+					  -2,0,2,
+					  -1,0,1};
+  float horizontal[]={-1,-2,-1,
+					0,0,0,
+					1,2,1};
+  float laplacian[]={0,-1,0,
+					 -1,4,-1,
+					 0,-1,0};
+  float lg[] = {0, 1, 1, 2, 2, 2, 1, 1, 0, //9x9 mask for laplacian of gaussian
+                1, 2, 4, 5, 5, 5, 4, 2, 1,
+                1, 4, 5, 3, 0, 3, 5, 4, 1,
+                2, 5, 3, -12, -24, -12, 3, 5, 2,
+                2, 5, 0, -24, -40, -24, 0, 5, 2,
+                2, 5, 3, -12, -24, -12, 3, 5, 2,
+                1, 4, 5, 3, 0, 3, 5, 4, 1,
+                1, 2, 4, 5, 5, 5, 4, 2, 1,
+                0, 1, 1, 2, 2, 2, 1, 1, 0};
+  float lg2[] = { //5x5 mask for laplacian gaussian
+    0, 0, 1, 0, 0,
+    0, 1, 2, 1, 0,
+    1, 2, -16, 2, 1,
+    0, 1, 2, 1, 0,
+    0, 0, 1, 0, 0};
+
+    int c1 = 1;
+    int c2 = 1;
+  Mat cap, frame, frame32f, frameFiltered;
+  Mat mask(3,3,CV_32F), mask1;
+  Mat result, result1;
+  double width, height, min, max;
+  int absolut;
+  char key;
+  video.open(0);
+  if(!video.isOpened())
+    return -1;
+  width=video.get(CV_CAP_PROP_FRAME_WIDTH);
+  height=video.get(CV_CAP_PROP_FRAME_HEIGHT);
+  std::cout << "largura=" << width << "\n";;
+  std::cout << "altura =" << height<< "\n";;
+
+  namedWindow("filtroespacial",1);
+  mask = Mat(3, 3, CV_32F, media);
+  scaleAdd(mask, 1/9.0, Mat::zeros(3,3,CV_32F), mask1);
+  swap(mask, mask1);
+  absolut=1; // calcs abs of the image
+
+  menu();
+  for(;;){
+    video >> cap;
+    cvtColor(cap, frame, CV_BGR2GRAY);
+    flip(frame, frame, 1);
+    imshow("original", frame);
+    frame.convertTo(frame32f, CV_32F);
+    filter2D(frame32f, frameFiltered, frame32f.depth(), mask, Point(c1,c1), 0);
+    if(absolut){
+      frameFiltered=abs(frameFiltered);
+    }
+    frameFiltered.convertTo(result, CV_8U);
+    imshow("filtroespacial", result);
+    key = (char) waitKey(10);
+    if( key == 27 ) break; // esc pressed!
+    switch(key){
+    case 'a':
+	  menu();
+      absolut=!absolut;
+      c1 = 1;
+      break;
+    case 'm':
+	  menu();
+      mask = Mat(3, 3, CV_32F, media);
+      scaleAdd(mask, 1/9.0, Mat::zeros(3,3,CV_32F), mask1);
+      mask = mask1;
+      printmask(mask);
+      c1 = 1;
+      break;
+    case 'g':
+	  menu();
+      mask = Mat(3, 3, CV_32F, gauss);
+      scaleAdd(mask, 1/16.0, Mat::zeros(3,3,CV_32F), mask1);
+      mask = mask1;
+      printmask(mask);
+      c1 = 1;
+      break;
+    case 'h':
+	  menu();
+      mask = Mat(3, 3, CV_32F, horizontal);
+      printmask(mask);
+      c1 = 1;
+      break;
+    case 'v':
+	  menu();
+      mask = Mat(3, 3, CV_32F, vertical);
+      printmask(mask);
+      c1 = 1;
+      break;
+    case 'l':
+	  menu();
+      mask = Mat(3, 3, CV_32F, laplacian);
+      printmask(mask);
+      c1 = 1;
+      break;
+    case 's':
+      mask = Mat(5, 5, CV_32F, lg2);
+      printmask(mask);
+      c1 = 2;
+      break;
+      case 'd':
+        mask = Mat(9, 9, CV_32F, lg);
+        printmask(mask);
+        c1 = 4;
+        break;
+    default:
+      break;
+    }
+  }
+  return 0;
+}
+```
+The 5x5 laplacian of gaussian filter result was:
+![](SpacialFiltteringI/results/filter5x5.png)
+
+And the 9x9 laplacian of gaussian filter result was:
+![](SpacialFiltteringI/results/filter9x9.png)
