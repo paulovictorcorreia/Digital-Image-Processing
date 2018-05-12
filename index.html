@@ -518,7 +518,7 @@ table.CodeRay td.code>pre{padding:0}
 <span id="author" class="author">Paulo Victor Queiroz Correia -paulocorreiaufrn@gmail.com</span><br>
 </div>
 <div id="toc" class="toc2">
-<div id="toctitle">Sumário</div>
+<div id="toctitle">Summary</div>
 <ul class="sectlevel1">
 <li><a href="#_initial_concepts">1. Initial Concepts</a></li>
 <li><a href="#_manipulating_pixels_on_an_image">2. Manipulating pixels on an image</a>
@@ -544,6 +544,7 @@ table.CodeRay td.code>pre{padding:0}
 <li><a href="#_laplacian_of_gaussian">5.1. Laplacian of gaussian</a></li>
 </ul>
 </li>
+<li><a href="#_kmeans">6. Kmeans</a></li>
 </ul>
 </div>
 </div>
@@ -1252,7 +1253,161 @@ The function we use to calculate the histogram is this:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="c++">include::SpacialFiltteringI/spacialfiltter.cpp</code></pre>
+<pre class="CodeRay highlight"><code data-lang="c++"><span class="preprocessor">#include</span> <span class="include">&lt;iostream&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;opencv2/opencv.hpp&gt;</span>
+
+<span class="directive">using</span> <span class="keyword">namespace</span> cv;
+<span class="directive">using</span> <span class="keyword">namespace</span> std;
+
+<span class="directive">void</span> printmask(Mat &amp;m){
+  <span class="keyword">for</span>(<span class="predefined-type">int</span> i=<span class="integer">0</span>; i&lt;m.size().height; i++){
+    <span class="keyword">for</span>(<span class="predefined-type">int</span> j=<span class="integer">0</span>; j&lt;m.size().width; j++){
+      cout &lt;&lt; m.at&lt;<span class="predefined-type">float</span>&gt;(i,j) &lt;&lt; <span class="string"><span class="delimiter">&quot;</span><span class="content">,</span><span class="delimiter">&quot;</span></span>;
+    }
+    cout &lt;&lt; endl;
+  }
+}
+
+<span class="directive">void</span> menu(){
+  cout &lt;&lt; <span class="string"><span class="delimiter">&quot;</span><span class="char">\n</span><span class="content">pressione a tecla para ativar o filtro: </span><span class="char">\n</span><span class="delimiter">&quot;</span></span>
+        <span class="string"><span class="delimiter">&quot;</span><span class="content">a - calcular modulo</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>
+    <span class="string"><span class="delimiter">&quot;</span><span class="content">m - media</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>
+    <span class="string"><span class="delimiter">&quot;</span><span class="content">g - gauss</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>
+    <span class="string"><span class="delimiter">&quot;</span><span class="content">v - vertical</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>
+        <span class="string"><span class="delimiter">&quot;</span><span class="content">h - horizontal</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>
+    <span class="string"><span class="delimiter">&quot;</span><span class="content">l - laplaciano</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>
+    <span class="string"><span class="delimiter">&quot;</span><span class="content">s - laplacian of gaussian 5x5</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>
+    <span class="string"><span class="delimiter">&quot;</span><span class="content">d - laplacian of gaussian 9x9</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>
+        <span class="string"><span class="delimiter">&quot;</span><span class="content">esc - sair</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>;
+}
+
+<span class="predefined-type">int</span> main(<span class="predefined-type">int</span> argvc, <span class="predefined-type">char</span>** argv){
+  VideoCapture video;
+  <span class="predefined-type">int</span> lg_flag = <span class="integer">0</span>;
+  <span class="predefined-type">float</span> media[] = {<span class="integer">1</span>,<span class="integer">1</span>,<span class="integer">1</span>,
+                                   <span class="integer">1</span>,<span class="integer">1</span>,<span class="integer">1</span>,
+                                   <span class="integer">1</span>,<span class="integer">1</span>,<span class="integer">1</span>};
+  <span class="predefined-type">float</span> gauss[] = {<span class="integer">1</span>,<span class="integer">2</span>,<span class="integer">1</span>,
+                                   <span class="integer">2</span>,<span class="integer">4</span>,<span class="integer">2</span>,
+                                   <span class="integer">1</span>,<span class="integer">2</span>,<span class="integer">1</span>};
+  <span class="predefined-type">float</span> vertical[]={-<span class="integer">1</span>,<span class="integer">0</span>,<span class="integer">1</span>,
+                                          -<span class="integer">2</span>,<span class="integer">0</span>,<span class="integer">2</span>,
+                                          -<span class="integer">1</span>,<span class="integer">0</span>,<span class="integer">1</span>};
+  <span class="predefined-type">float</span> horizontal[]={-<span class="integer">1</span>,-<span class="integer">2</span>,-<span class="integer">1</span>,
+                                        <span class="integer">0</span>,<span class="integer">0</span>,<span class="integer">0</span>,
+                                        <span class="integer">1</span>,<span class="integer">2</span>,<span class="integer">1</span>};
+  <span class="predefined-type">float</span> laplacian[]={<span class="integer">0</span>,-<span class="integer">1</span>,<span class="integer">0</span>,
+                                         -<span class="integer">1</span>,<span class="integer">4</span>,-<span class="integer">1</span>,
+                                         <span class="integer">0</span>,-<span class="integer">1</span>,<span class="integer">0</span>};
+  <span class="predefined-type">float</span> lg[] = {<span class="integer">0</span>, <span class="integer">1</span>, <span class="integer">1</span>, <span class="integer">2</span>, <span class="integer">2</span>, <span class="integer">2</span>, <span class="integer">1</span>, <span class="integer">1</span>, <span class="integer">0</span>, <span class="comment">//9x9 mask for laplacian of gaussian</span>
+                <span class="integer">1</span>, <span class="integer">2</span>, <span class="integer">4</span>, <span class="integer">5</span>, <span class="integer">5</span>, <span class="integer">5</span>, <span class="integer">4</span>, <span class="integer">2</span>, <span class="integer">1</span>,
+                <span class="integer">1</span>, <span class="integer">4</span>, <span class="integer">5</span>, <span class="integer">3</span>, <span class="integer">0</span>, <span class="integer">3</span>, <span class="integer">5</span>, <span class="integer">4</span>, <span class="integer">1</span>,
+                <span class="integer">2</span>, <span class="integer">5</span>, <span class="integer">3</span>, -<span class="integer">12</span>, -<span class="integer">24</span>, -<span class="integer">12</span>, <span class="integer">3</span>, <span class="integer">5</span>, <span class="integer">2</span>,
+                <span class="integer">2</span>, <span class="integer">5</span>, <span class="integer">0</span>, -<span class="integer">24</span>, -<span class="integer">40</span>, -<span class="integer">24</span>, <span class="integer">0</span>, <span class="integer">5</span>, <span class="integer">2</span>,
+                <span class="integer">2</span>, <span class="integer">5</span>, <span class="integer">3</span>, -<span class="integer">12</span>, -<span class="integer">24</span>, -<span class="integer">12</span>, <span class="integer">3</span>, <span class="integer">5</span>, <span class="integer">2</span>,
+                <span class="integer">1</span>, <span class="integer">4</span>, <span class="integer">5</span>, <span class="integer">3</span>, <span class="integer">0</span>, <span class="integer">3</span>, <span class="integer">5</span>, <span class="integer">4</span>, <span class="integer">1</span>,
+                <span class="integer">1</span>, <span class="integer">2</span>, <span class="integer">4</span>, <span class="integer">5</span>, <span class="integer">5</span>, <span class="integer">5</span>, <span class="integer">4</span>, <span class="integer">2</span>, <span class="integer">1</span>,
+                <span class="integer">0</span>, <span class="integer">1</span>, <span class="integer">1</span>, <span class="integer">2</span>, <span class="integer">2</span>, <span class="integer">2</span>, <span class="integer">1</span>, <span class="integer">1</span>, <span class="integer">0</span>};
+  <span class="predefined-type">float</span> lg2[] = { <span class="comment">//5x5 mask for laplacian gaussian</span>
+    <span class="integer">0</span>, <span class="integer">0</span>, <span class="integer">1</span>, <span class="integer">0</span>, <span class="integer">0</span>,
+    <span class="integer">0</span>, <span class="integer">1</span>, <span class="integer">2</span>, <span class="integer">1</span>, <span class="integer">0</span>,
+    <span class="integer">1</span>, <span class="integer">2</span>, -<span class="integer">16</span>, <span class="integer">2</span>, <span class="integer">1</span>,
+    <span class="integer">0</span>, <span class="integer">1</span>, <span class="integer">2</span>, <span class="integer">1</span>, <span class="integer">0</span>,
+    <span class="integer">0</span>, <span class="integer">0</span>, <span class="integer">1</span>, <span class="integer">0</span>, <span class="integer">0</span>};
+
+    <span class="predefined-type">int</span> c1 = <span class="integer">1</span>;
+    <span class="predefined-type">int</span> c2 = <span class="integer">1</span>;
+  Mat cap, frame, frame32f, frameFiltered;
+  Mat mask(<span class="integer">3</span>,<span class="integer">3</span>,CV_32F), mask1;
+  Mat result, result1;
+  <span class="predefined-type">double</span> width, height, min, max;
+  <span class="predefined-type">int</span> absolut;
+  <span class="predefined-type">char</span> key;
+  video.open(<span class="integer">0</span>);
+  <span class="keyword">if</span>(!video.isOpened())
+    <span class="keyword">return</span> -<span class="integer">1</span>;
+  width=video.get(CV_CAP_PROP_FRAME_WIDTH);
+  height=video.get(CV_CAP_PROP_FRAME_HEIGHT);
+  std::cout &lt;&lt; <span class="string"><span class="delimiter">&quot;</span><span class="content">largura=</span><span class="delimiter">&quot;</span></span> &lt;&lt; width &lt;&lt; <span class="string"><span class="delimiter">&quot;</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>;;
+  std::cout &lt;&lt; <span class="string"><span class="delimiter">&quot;</span><span class="content">altura =</span><span class="delimiter">&quot;</span></span> &lt;&lt; height&lt;&lt; <span class="string"><span class="delimiter">&quot;</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>;;
+
+  namedWindow(<span class="string"><span class="delimiter">&quot;</span><span class="content">filtroespacial</span><span class="delimiter">&quot;</span></span>,<span class="integer">1</span>);
+  mask = Mat(<span class="integer">3</span>, <span class="integer">3</span>, CV_32F, media);
+  scaleAdd(mask, <span class="integer">1</span>/<span class="float">9</span><span class="float">.0</span>, Mat::zeros(<span class="integer">3</span>,<span class="integer">3</span>,CV_32F), mask1);
+  swap(mask, mask1);
+  absolut=<span class="integer">1</span>; <span class="comment">// calcs abs of the image</span>
+
+  menu();
+  <span class="keyword">for</span>(;;){
+    video &gt;&gt; cap;
+    cvtColor(cap, frame, CV_BGR2GRAY);
+    flip(frame, frame, <span class="integer">1</span>);
+    imshow(<span class="string"><span class="delimiter">&quot;</span><span class="content">original</span><span class="delimiter">&quot;</span></span>, frame);
+    frame.convertTo(frame32f, CV_32F);
+    filter2D(frame32f, frameFiltered, frame32f.depth(), mask, Point(c1,c1), <span class="integer">0</span>);
+    <span class="keyword">if</span>(absolut){
+      frameFiltered=abs(frameFiltered);
+    }
+    frameFiltered.convertTo(result, CV_8U);
+    imshow(<span class="string"><span class="delimiter">&quot;</span><span class="content">filtroespacial</span><span class="delimiter">&quot;</span></span>, result);
+    key = (<span class="predefined-type">char</span>) waitKey(<span class="integer">10</span>);
+    <span class="keyword">if</span>( key == <span class="integer">27</span> ) <span class="keyword">break</span>; <span class="comment">// esc pressed!</span>
+    <span class="keyword">switch</span>(key){
+    <span class="keyword">case</span> <span class="char">'a'</span>:
+          menu();
+      absolut=!absolut;
+      c1 = <span class="integer">1</span>;
+      <span class="keyword">break</span>;
+    <span class="keyword">case</span> <span class="char">'m'</span>:
+          menu();
+      mask = Mat(<span class="integer">3</span>, <span class="integer">3</span>, CV_32F, media);
+      scaleAdd(mask, <span class="integer">1</span>/<span class="float">9</span><span class="float">.0</span>, Mat::zeros(<span class="integer">3</span>,<span class="integer">3</span>,CV_32F), mask1);
+      mask = mask1;
+      printmask(mask);
+      c1 = <span class="integer">1</span>;
+      <span class="keyword">break</span>;
+    <span class="keyword">case</span> <span class="char">'g'</span>:
+          menu();
+      mask = Mat(<span class="integer">3</span>, <span class="integer">3</span>, CV_32F, gauss);
+      scaleAdd(mask, <span class="integer">1</span>/<span class="integer">1</span><span class="float">6</span><span class="float">.0</span>, Mat::zeros(<span class="integer">3</span>,<span class="integer">3</span>,CV_32F), mask1);
+      mask = mask1;
+      printmask(mask);
+      c1 = <span class="integer">1</span>;
+      <span class="keyword">break</span>;
+    <span class="keyword">case</span> <span class="char">'h'</span>:
+          menu();
+      mask = Mat(<span class="integer">3</span>, <span class="integer">3</span>, CV_32F, horizontal);
+      printmask(mask);
+      c1 = <span class="integer">1</span>;
+      <span class="keyword">break</span>;
+    <span class="keyword">case</span> <span class="char">'v'</span>:
+          menu();
+      mask = Mat(<span class="integer">3</span>, <span class="integer">3</span>, CV_32F, vertical);
+      printmask(mask);
+      c1 = <span class="integer">1</span>;
+      <span class="keyword">break</span>;
+    <span class="keyword">case</span> <span class="char">'l'</span>:
+          menu();
+      mask = Mat(<span class="integer">3</span>, <span class="integer">3</span>, CV_32F, laplacian);
+      printmask(mask);
+      c1 = <span class="integer">1</span>;
+      <span class="keyword">break</span>;
+    <span class="keyword">case</span> <span class="char">'s'</span>:
+      mask = Mat(<span class="integer">5</span>, <span class="integer">5</span>, CV_32F, lg2);
+      printmask(mask);
+      c1 = <span class="integer">2</span>;
+      <span class="keyword">break</span>;
+      <span class="keyword">case</span> <span class="char">'d'</span>:
+        mask = Mat(<span class="integer">9</span>, <span class="integer">9</span>, CV_32F, lg);
+        printmask(mask);
+        c1 = <span class="integer">4</span>;
+        <span class="keyword">break</span>;
+    <span class="keyword">default</span>:
+      <span class="keyword">break</span>;
+    }
+  }
+  <span class="keyword">return</span> <span class="integer">0</span>;
+}</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1276,10 +1431,73 @@ The function we use to calculate the histogram is this:</p>
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_kmeans">6. Kmeans</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>On this section, we studied how kmeans algorithm can be affected by a random initialization of the centers of each cluster, which causes, for each round of the algorithm run, different clusters, meaning that the clusters will have different centers, thus each photo will be different.</p>
+</div>
+<div class="paragraph">
+<p>The code used for theses teste was the following:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="c++"><span class="preprocessor">#include</span> <span class="include">&lt;opencv2/opencv.hpp&gt;</span>
+<span class="preprocessor">#include</span> <span class="include">&lt;cstdlib&gt;</span>
+
+<span class="directive">using</span> <span class="keyword">namespace</span> cv;
+
+<span class="predefined-type">int</span> main( <span class="predefined-type">int</span> argc, <span class="predefined-type">char</span>** argv ){
+  <span class="predefined-type">int</span> nClusters = <span class="integer">8</span>;
+  Mat rotulos;
+  <span class="predefined-type">int</span> nRodadas = <span class="integer">1</span>;
+  Mat centros;
+
+  <span class="keyword">if</span>(argc!=<span class="integer">3</span>){
+        exit(<span class="integer">0</span>);
+  }
+
+  Mat img = imread( argv[<span class="integer">1</span>], CV_LOAD_IMAGE_COLOR);
+  Mat samples(img.rows * img.cols, <span class="integer">3</span>, CV_32F);
+
+  <span class="keyword">for</span>( <span class="predefined-type">int</span> y = <span class="integer">0</span>; y &lt; img.rows; y++ ){
+    <span class="keyword">for</span>( <span class="predefined-type">int</span> x = <span class="integer">0</span>; x &lt; img.cols; x++ ){
+      <span class="keyword">for</span>( <span class="predefined-type">int</span> z = <span class="integer">0</span>; z &lt; <span class="integer">3</span>; z++){
+        samples.at&lt;<span class="predefined-type">float</span>&gt;(y + x*img.rows, z) = img.at&lt;Vec3b&gt;(y,x)[z];
+          }
+        }
+  }
+
+  kmeans(samples,
+                 nClusters,
+                 rotulos,
+                 TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, <span class="integer">10000</span>, <span class="float">0</span><span class="float">.0001</span>),
+                 nRodadas,
+                 KMEANS_RANDOM_CENTERS,
+                 centros );
+
+
+  Mat rotulada( img.size(), img.type() );
+  <span class="keyword">for</span>( <span class="predefined-type">int</span> y = <span class="integer">0</span>; y &lt; img.rows; y++ ){
+    <span class="keyword">for</span>( <span class="predefined-type">int</span> x = <span class="integer">0</span>; x &lt; img.cols; x++ ){
+          <span class="predefined-type">int</span> indice = rotulos.at&lt;<span class="predefined-type">int</span>&gt;(y + x*img.rows,<span class="integer">0</span>);
+          rotulada.at&lt;Vec3b&gt;(y,x)[<span class="integer">0</span>] = (uchar) centros.at&lt;<span class="predefined-type">float</span>&gt;(indice, <span class="integer">0</span>);
+          rotulada.at&lt;Vec3b&gt;(y,x)[<span class="integer">1</span>] = (uchar) centros.at&lt;<span class="predefined-type">float</span>&gt;(indice, <span class="integer">1</span>);
+          rotulada.at&lt;Vec3b&gt;(y,x)[<span class="integer">2</span>] = (uchar) centros.at&lt;<span class="predefined-type">float</span>&gt;(indice, <span class="integer">2</span>);
+        }
+  }
+  imshow( <span class="string"><span class="delimiter">&quot;</span><span class="content">clustered image</span><span class="delimiter">&quot;</span></span>, rotulada );
+  imwrite(argv[<span class="integer">2</span>], rotulada);
+  waitKey( <span class="integer">0</span> );
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2018-04-17 21:37:42 -03
+Last updated 2018-05-12 14:55:43 -03
 </div>
 </div>
 <script type="text/x-mathjax-config">
